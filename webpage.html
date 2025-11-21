@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy Emissions Records</title>
+    <!-- Link external CSS -->
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Energy Data Management</h1>
+            <p class="subtitle">Manage campus emissions and GFA data</p>
+        </header>
+        <!--Toggle between Datasets-->
+        <div class="tab-navigation">
+            <button class="tab-btn" onclick="switchTab('dashboard')">
+                Dashboard
+            </button>
+            <button class="tab-btn active" onclick="switchTab('emissions')">
+                Emissions Data
+            </button>
+            <button class="tab-btn" onclick="switchTab('gfa')">
+                Gross Floor Area
+            </button>
+        </div>
+        <div id="dashboardContainer" class="hidden">
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon">⚡</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Latest Month Total Emissions</div>
+                        <div class="kpi-value" id="kpiTotalEmissions">—</div>
+                        <div class="kpi-subtitle" id="kpiEmissionsDate">—</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-icon">📐</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Latest GFA Total</div>
+                        <div class="kpi-value" id="kpiLatestGFA">—</div>
+                        <div class="kpi-subtitle" id="kpiGFADate">—</div>
+                    </div>
+                </div>
+
+                <div class="kpi-card highlight">
+                    <div class="kpi-icon">📊</div>
+                    <div class="kpi-content">
+                        <div class="kpi-label">Emission Intensity</div>
+                        <div class="kpi-value" id="kpiIntensity">—</div>
+                        <div class="kpi-subtitle">kWh per m² (Latest Month)</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 20px; color: #0f172a; font-size: 20px;">📈 Total Emissions Over Time</h3>
+                <div class="chart-container">
+                    <canvas id="emissionsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Data Integrity Section -->
+            <div class="card">
+                <h3 style="margin-bottom: 20px; color: #0f172a; font-size: 20px;">🔍 Data Integrity Statistics</h3>
+                
+                <div class="integrity-grid">
+                    <div class="integrity-card">
+                        <div class="integrity-header">
+                            <span class="integrity-icon">✅</span>
+                            <span class="integrity-title">Data Completeness</span>
+                        </div>
+                        <div class="integrity-value" id="completenessPercentage">—</div>
+                        <div class="integrity-detail" id="completenessDetail">—</div>
+                    </div>
+
+                    <div class="integrity-card">
+                        <div class="integrity-header">
+                            <span class="integrity-icon">📊</span>
+                            <span class="integrity-title">Total Records</span>
+                        </div>
+                        <div class="integrity-value" id="totalRecordsCount">—</div>
+                        <div class="integrity-detail" id="recordsDetail">—</div>
+                    </div>
+
+                    <div class="integrity-card">
+                        <div class="integrity-header">
+                            <span class="integrity-icon">⚠️</span>
+                            <span class="integrity-title">Missing Values</span>
+                        </div>
+                        <div class="integrity-value" id="missingValuesCount">—</div>
+                        <div class="integrity-detail" id="missingDetail">—</div>
+                    </div>
+
+                    <div class="integrity-card">
+                        <div class="integrity-header">
+                            <span class="integrity-icon">📅</span>
+                            <span class="integrity-title">Month Completeness</span>
+                        </div>
+                        <div class="integrity-value" id="monthCompleteness">—</div>
+                        <div class="integrity-detail" id="monthDetail">—</div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h4>Missing Data by Block</h4>
+                        <div class="chart-container-small">
+                            <canvas id="missingDataChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="chart-card">
+                        <h4>Data Completeness Trend</h4>
+                        <div class="chart-container-small">
+                            <canvas id="completenessTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="dataManagementContainer">     
+            <div class="card">
+                <div class="controls">
+                    <input type="number" id="filterYear" placeholder="Filter by year" />
+                    <input type="number" id="filterMonth" placeholder="Filter by month (1-12)" />
+                    <button class="btn-secondary" onclick="clearFilters()">Clear Filters</button>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-success" onclick="toggleAddForm()">+ Add New Record</button>
+                    <label class="btn-primary" style="display: inline-block; cursor: pointer;">
+                        Import CSV
+                        <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="handleImportUpload(event)" />
+                    </label>
+                </div>
+
+                <div id="statusMessage" class="status-message hidden"></div>
+            </div>
+        
+            <div id="addFormContainer" class="card form-section hidden">
+                <h3 id="formTitle" style="margin-bottom: 16px; color: #0f172a;">Add New Record</h3>
+                
+                <div class="form-row">
+                    <input type="number" id="newYear" min="2020" max="2099" placeholder="Year" value="2025" />
+                    <input type="number" id="newMonth" min="1" max="12" placeholder="Month (1-12)" value="1" />
+                </div>
+
+                <p id="blockLabel" style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 12px;">Block Values (kWh)</p>
+                <div class="blocks-grid" id="newBlocksGrid"></div>
+
+                <div class="btn-group">
+                    <button class="btn-success" onclick="saveNewRecord()">Save Record</button>
+                    <button class="btn-secondary" onclick="toggleAddForm()">Cancel</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div id="tableContainer">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>Month</th>
+                                <th colspan="15" id="tableHeader">Block Emissions (kWh)</th>
+                                <th>Actions</th>
+                            </tr>
+                            <tr>
+                                <th></th>
+                                <th></th>
+                                <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+                                <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                                <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTable">
+                            <tr class="empty-state">
+                                <td colspan="18">No records found</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Pagination Controls -->
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Showing <span id="showingStart">0</span> to <span id="showingEnd">0</span> of <span id="totalRecords">0</span> records
+        </div>
+        
+        <div class="pagination-controls" id="paginationControls">
+            <!-- Pagination buttons will be inserted here -->
+        </div>
+
+        <div class="page-size-selector">
+            <label for="pageSize">Rows per page:</label>
+            <select id="pageSize" onchange="changePageSize()">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>
+    <!-- Link external JS -->
+    <script src="script.js"></script>
+</body>
+</html>
