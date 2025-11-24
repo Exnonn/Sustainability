@@ -717,8 +717,18 @@ async function handleImportUpload(event) {
         showStatus('Uploading CSV...', true);
 
         const fileContent = await file.text();
+        
+        // Determine filename based on current tab
+        let filename = file.name;
+        if (currentDataType === 'gfa' && !filename.toLowerCase().includes('gfa')) {
+            // Prepend 'gfa_' to filename if on GFA tab and filename doesn't already contain 'gfa'
+            const nameParts = filename.split('.');
+            const extension = nameParts.pop();
+            const baseName = nameParts.join('.');
+            filename = `gfa_${baseName}.${extension}`;
+        }
 
-        const response = await fetch(`${API_BASE}/upload-csv?filename=${file.name}`, {
+        const response = await fetch(`${API_BASE}/upload-csv?filename=${filename}`, {
             method: 'POST',
             headers: { 'Content-Type': 'text/csv' },
             body: fileContent
@@ -726,10 +736,23 @@ async function handleImportUpload(event) {
 
         if (!response.ok) throw new Error('Upload failed');
 
-        showStatus('✓ File uploaded successfully. Processing...', true);
+        const result = await response.json();
+        
+        showStatus(`✓ File uploaded to ${result.folder || 'emissions'}/. Processing...`, true);
+        
+        // Wait for S3 trigger to process, then refresh
         setTimeout(() => {
             currentPage = 1;
-            fetchRecords();
+            
+            // If on dashboard, reload dashboard to show new data
+            if (currentDataType === 'dashboard') {
+                loadDashboard();
+            } else {
+                // If on data management tab, refresh the table
+                fetchRecords();
+            }
+            
+            showStatus('✅ Data imported successfully!', true);
         }, 3000);
 
         document.getElementById('csvFile').value = '';
