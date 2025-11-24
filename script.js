@@ -130,21 +130,43 @@ async function loadDashboard() {
             }
         }
         
+        // Calculate emission intensity
         let intensityGFA = 0;
+        let gfaUsedForIntensity = null;
+
+        // Try to find matching month/year
         const matchingGFA = gfaData.find(gfa => {
             const gfaYear = gfa.Year || gfa.year;
             const gfaMonth = gfa.Month || gfa.month;
             return gfaYear === latestEmissionYear && gfaMonth === latestEmissionMonth;
         });
-        
+
         if (matchingGFA) {
+            gfaUsedForIntensity = matchingGFA;
+        } else if (sortedGFA.length > 0) {
+            // No exact match, use latest available GFA
+            gfaUsedForIntensity = sortedGFA[0];
+        }
+
+        if (gfaUsedForIntensity) {
             for (let i = 1; i <= 15; i++) {
-                const value = parseFloat(matchingGFA[i.toString()]) || 0;
+                const value = parseFloat(gfaUsedForIntensity[i.toString()]) || 0;
                 intensityGFA += value;
             }
         }
-        
+
         const intensity = intensityGFA > 0 ? (totalEmissions / intensityGFA).toFixed(2) : 'N/A';
+
+        // Update intensity card subtitle to show which GFA data was used
+        let intensitySubtitle = 'kWh per m² (Latest Month)';
+        if (gfaUsedForIntensity) {
+            const gfaYearUsed = gfaUsedForIntensity.Year || gfaUsedForIntensity.year;
+            const gfaMonthUsed = gfaUsedForIntensity.Month || gfaUsedForIntensity.month;
+            
+            if (gfaYearUsed !== latestEmissionYear || gfaMonthUsed !== latestEmissionMonth) {
+                intensitySubtitle = `kWh per m² (using GFA from ${getMonthName(gfaMonthUsed)} ${gfaYearUsed})`;
+            }
+        };
         
         document.getElementById('kpiTotalEmissions').textContent = totalEmissions.toLocaleString() + ' kWh';
         document.getElementById('kpiEmissionsDate').textContent = `${getMonthName(latestEmissionMonth)} ${latestEmissionYear}`;
